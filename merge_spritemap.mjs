@@ -18,10 +18,15 @@ const getDuration = (filePath) => {
   });
 };
 
-const joinMp3FilesWithSprite = async (inputDir, outputPath, spritePath) => {
+const joinMp3FilesWithSprite = async (
+  inputDir,
+  outputDir,
+  outputPath,
+  spritePath
+) => {
   try {
     const fileNames = fs
-      .readdirSync(inputDir)
+      .readdirSync(outputDir)
       .filter((f) => f.toLowerCase().endsWith(".mp3"))
       .sort((a, b) => a.localeCompare(b));
 
@@ -35,19 +40,19 @@ const joinMp3FilesWithSprite = async (inputDir, outputPath, spritePath) => {
 
     const command = ffmpeg();
 
-    fileNames.forEach((fileName) => {
-      const fullPath = path.join(inputDir, fileName);
-      command.input(fullPath);
-    });
-
     for (const fileName of fileNames) {
-      const fullPath = path.join(inputDir, fileName);
-      const durationMs = await getDuration(fullPath);
+      const fullPath = path.join(outputDir, fileName);
+      command.input(fullPath);
+
       const id = path.parse(fileName).name.replaceAll("-", "_");
+      const duration = await getDuration(fullPath);
+      const effectiveDuration = await getDuration(
+        path.join(inputDir, fileName)
+      );
 
-      spriteMap[id] = [currentStart, Math.ceil(durationMs)];
+      spriteMap[id] = [Math.ceil(currentStart), Math.ceil(effectiveDuration)];
 
-      currentStart += Math.ceil(durationMs); // round to next full second
+      currentStart += duration; // round to next full second
     }
 
     const audioInputs = fileNames.map((_, i) => `[${i}:a]`).join("");
@@ -72,9 +77,15 @@ const joinMp3FilesWithSprite = async (inputDir, outputPath, spritePath) => {
 };
 
 // Input and output folder paths
+const inputFolderPath = "./sounds"; // Path to the "sounds" folder
 const outputFolderPath = "./normalized"; // Path to the "normalized" folder
 const joinedFilePath = "./results/sound_effects.mp3"; // Path to the "normalized" folder
 const spritePath = "./results/spritemap.json";
 
 // After normalization is done:
-joinMp3FilesWithSprite(outputFolderPath, joinedFilePath, spritePath);
+joinMp3FilesWithSprite(
+  inputFolderPath,
+  outputFolderPath,
+  joinedFilePath,
+  spritePath
+);
